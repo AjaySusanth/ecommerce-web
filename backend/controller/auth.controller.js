@@ -1,8 +1,7 @@
 import { redis } from "../lib/redis.js"
 import User from "../models/user.model.js"
 import jwt from 'jsonwebtoken'
-// import dotenv from 'dotenv'
-// dotenv.config()
+
 const generateToken = (userId) => {
     const accessToken = jwt.sign({userId},process.env.ACCESS_TOKEN_SECRET,{
         expiresIn:'15m'
@@ -56,7 +55,10 @@ export const signup = async (req,res)=>{
         
     } catch (error) {
         console.log(error)
-        res.status(500).json({message:error.message || "Unexpected error occeured"})
+        res.status(500).json({
+            message:"Unexpected error occeured",
+            error:error.message
+        })
     }
 }
 
@@ -65,5 +67,21 @@ export const login = async (req,res)=>{
 }
 
 export const logout = async (req,res)=>{
-    res.send("logout route")
+    try {
+        const refreshToken = req.cookies.refreshToken
+        if(refreshToken) {
+            const decoded = jwt.verify(refreshToken,process.env.REFRESH_TOKEN_SECRET)
+            await redis.del(`refresh_token:${decoded.userId}`)
+        }
+    
+        res.clearCookie('accessToken')
+        res.clearCookie('refreshToken')
+        res.json({message:"Logout successful"})
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({
+            message:"Unexpected error occured",
+            error:error.message
+        })
+    }
 }
