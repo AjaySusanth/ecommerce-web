@@ -31,17 +31,16 @@ const userSchema = mongoose.Schema({
         }
     ],
     role:{
-        tyoe:String,
+        type:String,
         enum:["customer","admin"],
         default:"customer"
     }
 },{timestamps:true})
 
-const User = mongoose.model("User",userSchema)
 
 //Pre save function to hash password
 userSchema.pre('save',async function(next) {
-    if(!this.isModiified("password")) return next()
+    if(!this.isModified("password")) return next()
     
     try {
         const salt = await bcrypt.genSalt(10)
@@ -55,5 +54,7 @@ userSchema.pre('save',async function(next) {
 userSchema.methods.comparePassword = async(password) => {
     return bcrypt.compare(password,this.password)
 }
+
+const User = mongoose.model("User",userSchema)
 
 export default User
