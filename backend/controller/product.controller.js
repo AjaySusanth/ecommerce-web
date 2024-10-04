@@ -73,6 +73,7 @@ export const deleteProduct = async(req,res) => {
         })
 
         if(product.image) {
+            //TODO: HOW DO YOU GET ID OF IMAGE
             const publicId = product.image.split('/').pop().split(".")[0]
             try {
                 await cloudinary.uploader.destroy(`products/${publicId}`)
@@ -91,5 +92,77 @@ export const deleteProduct = async(req,res) => {
             message:"Unexpected error occured while deleting product",
             error:error.message  
         })
+    }
+}
+
+export const getRecommendedProducts = async(req,res) => {
+    try {
+        const products = await Product.aggregate([
+            {
+                $sample:{size:3}
+            },
+            {
+                $project:{
+                    _id:1,
+                    name:1,
+                    description:1,
+                    price:1,
+                    image:1
+                }
+            }
+        ])
+
+        res.json(products)
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({
+            message:"Unexpected error occured while getting recommended products",
+            error:error.message  
+        })
+    }
+}
+
+export const getProductsByCategory = async(req,res) =>{
+    const category = req.params
+    try {
+        const products = await Product.find({category})
+        res.json(products)
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({
+            message:"Unexpected error occured while getting category products",
+            error:error.message  
+        })
+    }
+}
+
+export const toggleFeaturedProduct = async(req,res) => {
+    const productId = req.params.id
+    try {
+        const product = await Product.findById(productId)
+        if(!product)
+            return res.status(404).json({
+                message:'Product not found'
+            })
+
+        product.isFeatured = !product.isFeatured
+        const updatedProduct = await product.save()
+        await updateFeaturedProductsCache()
+        res.json(updatedProduct)
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({
+            message:"Unexpected error occured while updating featured status of product",
+            error:error.message  
+        })
+    }
+}
+
+async function updateFeaturedProductsCache () {
+    try {
+        const featuredProducts = await Product.find({isFeatured:true})
+        await redis.set("featured_products",JSON.stringify(featuredProducts))
+    } catch (error) {
+        console.log("Error while updating featured products redis db: ",error.message)   
     }
 }
