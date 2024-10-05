@@ -73,6 +73,7 @@ export const getCartProducts = async(req,res) => {
             return {...products.toJSON(),quantity:item.quatnity}
         })
     } catch (error) {
-        
+        console.log(error)
+        res.status(500).json({message:"Error in getting cart products",error:error.message})
     }
 }
